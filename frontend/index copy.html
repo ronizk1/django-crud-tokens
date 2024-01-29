@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product CRUD</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body style="background-color: rgb(239, 227, 236);">
+
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-6">
+            <h2>Login</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="loginUsername">Username</label>
+                    <input type="text" class="form-control" id="loginUsername" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" class="form-control" id="loginPassword" name="password" required>
+                </div>
+                <div class="form-group form-check">
+                    <input type="checkbox" class="form-check-input" id="rememberMe">
+                    <label class="form-check-label" for="rememberMe">Remember Me</label>
+                </div>
+                <button type="submit" class="btn btn-primary">Login</button>
+            </form>
+            <div id="loginMessage" class="mt-3"></div>
+        </div>
+        <div class="col-md-6">
+            <h2>Register</h2>
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="registerUsername">Username</label>
+                    <input type="text" class="form-control" id="registerUsername" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerEmail">Email</label>
+                    <input type="email" class="form-control" id="registerEmail" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">Password</label>
+                    <input type="password" class="form-control" id="registerPassword" name="password" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Register</button>
+            </form>
+            <div id="registerMessage" class="mt-3"></div>
+        </div>
+    </div>
+</div>
+
+<div class="container mt-5">
+    <h1>Products Management</h1>
+
+    <!-- Product List -->
+    <h2>Product List</h2>
+    <div class="row" id="productList">
+        <!-- Product items will be populated here dynamically -->
+    </div>
+
+    <!-- Create Product Form -->
+    <h3>Create Product</h3>
+    <div>
+        <label for="desc">Description:</label>
+        <input type="text" id="desc" class="form-control" placeholder="Enter description">
+        <br>
+        <label for="price">Price:</label>
+        <input type="number" id="price" class="form-control" min="0" step="0.01" placeholder="Enter price">
+        <br>
+        <label for="image">Image:</label>
+        <input type="file" id="image" class="form-control-file" accept="image/*">
+        <br>
+        <button onclick="createProduct()" class="btn btn-primary">Create Product</button>
+    </div>
+
+    <!-- Update Product Form -->
+    <h3>Update Product</h3>
+    <div>
+        <label for="updateProductId">Product ID to Update:</label>
+        <input type="number" id="updateProductId" class="form-control" placeholder="Enter product ID">
+        <br>
+        <label for="updateDesc">New Description:</label>
+        <input type="text" id="updateDesc" class="form-control" placeholder="Enter new description">
+        <br>
+        <label for="updatePrice">New Price:</label>
+        <input type="number" id="updatePrice" class="form-control" min="0" step="0.01" placeholder="Enter new price">
+        <br>
+        <button onclick="updateProduct()" class="btn btn-primary">Update Product</button>
+    </div>
+
+    <!-- Delete Product Form -->
+    <h3>Delete Product</h3>
+    <div>
+        <label for="deleteProductId">Product ID to Delete:</label>
+        <input type="number" id="deleteProductId" class="form-control" placeholder="Enter product ID">
+        <br>
+        <button onclick="deleteProduct()" class="btn btn-danger">Delete Product</button>
+    </div>
+</div>
+
+<script>
+    const SERVER = 'http://127.0.0.1:8000';
+
+    // Function to fetch and display products
+    function fetchProducts() {
+        axios.get(`${SERVER}/products`, {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('accessToken')
+            }
+        })
+        .then(response => {
+            const productList = document.getElementById('productList');
+            productList.innerHTML = ''; // Clear existing content
+            response.data.forEach(product => {
+                const card = document.createElement('div');
+                card.classList.add('col-md-4', 'mb-4');
+
+                card.innerHTML = `
+                    <div class="card">
+                        <img src="${SERVER}/${product.image}" class="card-img-top" alt="Product Image">
+                        <div class="card-body">
+                            <h5 class="card-title">${product.desc}</h5>
+                            <p class="card-text">Price: $${product.price}</p>
+                            <p>ID: ${product.id}</p>
+                        </div>
+                    </div>
+                `;
+                productList.appendChild(card);
+            });
+        })
+        .catch(error => console.error('Error fetching products:', error));
+    }
+
+    // Call fetchProducts initially to populate the list
+    fetchProducts();
+
+    // Function to create a new product
+    function createProduct() {
+        const desc = document.getElementById('desc').value;
+        const price = parseFloat(document.getElementById('price').value);
+        const image = document.getElementById('image').files[0];
+
+        const formData = new FormData();
+        formData.append('desc', desc);
+        formData.append('price', price);
+        formData.append('image', image);
+
+        axios.post(`${SERVER}/products`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+                'Authorization': 'Bearer ' + localStorage.getItem('accessToken')
+            }
+        })
+        .then(response => {
+            console.log('Product created successfully:', response.data);
+            fetchProducts(); // Refresh the list after creating a new product
+        })
+        .catch(error => console.error('Error creating product:', error));
+    }
+
+    // Function to update a product
+    function updateProduct() {
+        const productId = document.getElementById('updateProductId').value;
+        const desc = document.getElementById('updateDesc').value;
+        const price = parseFloat(document.getElementById('updatePrice').value);
+
+        axios.put(`${SERVER}/products/${productId}`, { desc, price }, {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('accessToken')
+            }
+        })
+        .then(response => {
+            console.log('Product updated successfully:', response.data);
+            fetchProducts(); // Refresh the list after updating a product
+        })
+        .catch(error => console.error('Error updating product:', error));
+    }
+
+    // Function to delete a product
+    function deleteProduct() {
+        const productId = document.getElementById('deleteProductId').value;
+
+        axios.delete(`${SERVER}/products/${productId}`, {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('accessToken')
+            }
+        })
+        .then(response => {
+            console.log('Product deleted successfully');
+            fetchProducts(); // Refresh the list after deleting a product
+        })
+        .catch(error => console.error('Error deleting product:', error));
+    }
+
+    // Function to handle login form submission
+    document.getElementById('loginForm').addEventListener('submit', async function (event) {
+        event.preventDefault(); // Prevent default form submission
+        const username = document.getElementById('loginUsername').value;
+        const password = document.getElementById('loginPassword').value;
+        const rememberMe = document.getElementById('rememberMe').checked;
+
+        try {
+            const response = await axios.post(`${SERVER}/login/`, { username, password });
+            document.getElementById('loginMessage').innerHTML = '<div class="alert alert-success" role="alert">Login successful</div>';
+
+            // Save the access token to local storage
+            localStorage.setItem('accessToken', response.data.access);
+
+            // If "Remember Me" is checked, also save the refresh token
+            if (rememberMe) {
+                localStorage.setItem('refreshToken', response.data.refresh);
+            } else {
+                localStorage.removeItem('refreshToken');
+            }
+
+            // Redirect to the desired page
+
+        } catch (error) {
+            document.getElementById('loginMessage').innerHTML = '<div class="alert alert-danger" role="alert">Login failed. Please try again.</div>';
+            console.error('Login failed:', error);
+        }
+    });
+
+    // Function to handle registration form submission
+    document.getElementById('registerForm').addEventListener('submit', async function (event) {
+        event.preventDefault(); // Prevent default form submission
+        const username = document.getElementById('registerUsername').value;
+        const email = document.getElementById('registerEmail').value;
+        const password = document.getElementById('registerPassword').value;
+
+        try {
+            const response = await axios.post(`${SERVER}/register/`, { username, email, password });
+            document.getElementById('registerMessage').innerHTML = '<div class="alert alert-success" role="alert">Registration successful</div>';
+        } catch (error) {
+            document.getElementById('registerMessage').innerHTML = '<div class="alert alert-danger" role="alert">Registration failed. Please try again.</div>';
+            console.error('Registration failed:', error);
+        }
+    });
+
+    // Check if there's a stored refresh token on page load
+    window.addEventListener('load', function () {
+        const accessToken = localStorage.getItem('accessToken');
+        const refreshToken = localStorage.getItem('refreshToken');
+        if (accessToken && refreshToken) {
+            // Do something with the stored tokens
+        }
+
+    });
+</script>
+</body>
+</html>
